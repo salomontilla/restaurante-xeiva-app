@@ -28,36 +28,64 @@ pnpm install
 cp .env.example .env.local     # y rellenar con los datos del Supabase self-hosted
 ```
 
-### Base de datos
-
-Las migraciones son SQL plano en `supabase/migrations/`, numeradas y en orden de dependencia.
+### Supabase local
 
 ```bash
-export SUPABASE_DB_URL="postgresql://postgres:PASSWORD@HOST:5432/postgres"
+supabase start        # levanta el stack completo en Docker
+supabase db reset     # re-aplica migraciones + seed desde cero
+supabase status       # URLs y claves
+```
 
-pnpm db:push      # aplica las migraciones
-pnpm db:seed      # datos de ejemplo: 3 usuarios (uno por rol), 2 salones, 13 mesas y una carta
+Los puertos están en el rango **5434x** (`supabase/config.toml`) para no chocar con otros
+stacks locales de Supabase en la misma máquina:
+
+| | |
+|---|---|
+| API (Kong) | http://127.0.0.1:54341 |
+| Postgres | `postgresql://postgres:postgres@127.0.0.1:54342/postgres` |
+| Studio | http://127.0.0.1:54343 |
+| Mailpit | http://127.0.0.1:54344 |
+
+Dos ajustes en `config.toml` que **también hay que replicar en el self-hosted**:
+`jwt_expiry = 28800` (8 h, para que el mesero sobreviva un turno sin señal) y
+`enable_signup = false` (nadie se registra solo).
+
+### Migraciones y tipos
+
+SQL plano en `supabase/migrations/`, numeradas y en orden de dependencia. `supabase start` y
+`db reset` las aplican solas junto con el seed.
+
+```bash
+export SUPABASE_DB_URL="postgresql://postgres:postgres@127.0.0.1:54342/postgres"
+
+pnpm db:push      # aplicar contra otra base (ej. el self-hosted)
 pnpm gen:types    # regenera lib/db.types.ts  ← HACERLO DESPUÉS DE CADA MIGRACIÓN
 ```
 
 Usuarios del seed (contraseña `xeiva123` — **no usar en producción**):
 `admin@xeiva.local` · `caja@xeiva.local` · `mesero@xeiva.local`
 
-Prueba de humo del esquema, 22 casos incluidos idempotencia offline, división de cuentas y los
-negativos de RLS de cada rol:
+### Pruebas
 
 ```bash
-psql "$SUPABASE_DB_URL" -f supabase/tests/flujo_completo.sql
+pnpm test:db      # 22 casos sobre el esquema (no necesita la app corriendo)
+pnpm test:auth    # login y guards por rol (necesita `pnpm dev` corriendo)
+pnpm typecheck && pnpm lint
 ```
 
-Corre como `authenticated` suplantando el claim del JWT, **no** con service_role: probar RLS con
-service_role no prueba nada, porque la ignora.
+`test:db` cubre idempotencia del envío offline, adiciones que solo imprimen lo nuevo, división
+de cuentas, pago mixto y los negativos de RLS de cada rol. Corre como `authenticated`
+suplantando el claim del JWT, **no** con service_role: probar RLS con service_role no prueba
+nada, porque la ignora.
+
+`test:auth` inicia sesión con la misma librería que usa la app para producir cookies reales, y
+comprueba a dónde aterriza cada rol — incluida la revocación inmediata al desactivar a alguien
+con su token todavía vigente.
 
 ### Desarrollo
 
 ```bash
 pnpm dev
-pnpm typecheck && pnpm lint
 ```
 
 ## Estructura
@@ -92,7 +120,7 @@ Dos convenciones que importan:
 |---|---|
 | 0 · Infraestructura, clientes de Supabase, tipos | ✅ |
 | 1 · Esquema, RLS, RPCs, vistas, seed y pruebas | ✅ |
-| 2 · Auth, guards y route groups por rol | ⬜ |
+| 2 · Auth, guards y route groups por rol | ✅ |
 | 3 · Admin: salones, mesas, menú, usuarios | ⬜ |
 | 4 · Capa offline + vista Mesero (PWA) | ⬜ |
 | 5 · Caja: mapa realtime, detalle, impresión | ⬜ |

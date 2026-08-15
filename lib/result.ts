@@ -25,7 +25,25 @@ export type RpcError =
   /** El plato, la mesa o el pedido referenciado no existe. */
   | "NOT_FOUND"
   /** La línea ya se imprimió: solo Caja puede anularla. */
-  | "ITEM_PRINTED";
+  | "ITEM_PRINTED"
+  /** Ya hay una caja abierta (probablemente de una jornada anterior sin cerrar). */
+  | "SESSION_ALREADY_OPEN"
+  /** El arqueo ya fue cerrado. */
+  | "SESSION_CLOSED"
+  /** No se puede corregir un arqueo que sigue abierto. */
+  | "SESSION_NOT_CLOSED"
+  /** No hay caja abierta para registrar el movimiento. */
+  | "NO_OPEN_SESSION"
+  /** Quedan mesas sin cobrar; se puede insistir. */
+  | "OPEN_ORDERS"
+  /** Hay descuadre y falta la explicación. */
+  | "NOTE_REQUIRED"
+  /** Un arqueo solo se corrige una vez. */
+  | "ALREADY_AMENDED"
+  /** Falta el motivo. */
+  | "REASON_REQUIRED"
+  /** Monto inválido (negativo o vacío). */
+  | "INVALID_AMOUNT";
 
 export type RpcResult<T> =
   | ({ ok: true; code: null } & T)
@@ -46,4 +64,13 @@ export const RPC_ERROR_MESSAGES: Record<RpcError, string> = {
   FORBIDDEN: "No tienes permiso para hacer esto.",
   NOT_FOUND: "No se encontró el registro.",
   ITEM_PRINTED: "Esta línea ya fue a cocina: solo Caja puede anularla.",
+  SESSION_ALREADY_OPEN: "Ya hay una caja abierta. Ciérrala antes de abrir otra.",
+  SESSION_CLOSED: "Este arqueo ya fue cerrado.",
+  SESSION_NOT_CLOSED: "Este arqueo todavía está abierto.",
+  NO_OPEN_SESSION: "No hay una caja abierta.",
+  OPEN_ORDERS: "Quedan mesas sin cobrar.",
+  NOTE_REQUIRED: "Hay diferencia: escribe una observación explicando por qué.",
+  ALREADY_AMENDED: "Este arqueo ya se corrigió una vez.",
+  REASON_REQUIRED: "Escribe el motivo.",
+  INVALID_AMOUNT: "El monto no es válido.",
 };

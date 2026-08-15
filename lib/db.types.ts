@@ -9,6 +9,146 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      cash_movements: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          id: string
+          kind: Database["public"]["Enums"]["cash_movement_kind"]
+          reason: string
+          session_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          id?: string
+          kind: Database["public"]["Enums"]["cash_movement_kind"]
+          reason: string
+          session_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["cash_movement_kind"]
+          reason?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sessions: {
+        Row: {
+          amend_reason: string | null
+          amended_at: string | null
+          amended_by: string | null
+          amended_from: number | null
+          business_date: string | null
+          cash_difference: number | null
+          closed_at: string | null
+          closed_by: string | null
+          counted_cash: number | null
+          counted_transfers: number | null
+          expected_cash: number | null
+          expected_transfers: number | null
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_float: number
+          seq: number
+          transfer_difference: number | null
+        }
+        Insert: {
+          amend_reason?: string | null
+          amended_at?: string | null
+          amended_by?: string | null
+          amended_from?: number | null
+          business_date?: string | null
+          cash_difference?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_cash?: number | null
+          counted_transfers?: number | null
+          expected_cash?: number | null
+          expected_transfers?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_float?: number
+          seq: number
+          transfer_difference?: number | null
+        }
+        Update: {
+          amend_reason?: string | null
+          amended_at?: string | null
+          amended_by?: string | null
+          amended_from?: number | null
+          business_date?: string | null
+          cash_difference?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_cash?: number | null
+          counted_transfers?: number | null
+          expected_cash?: number | null
+          expected_transfers?: number | null
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_float?: number
+          seq?: number
+          transfer_difference?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_amended_by_fkey"
+            columns: ["amended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dining_rooms: {
         Row: {
           created_at: string
@@ -404,6 +544,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          cash_session_id: string | null
           check_id: string
           created_at: string
           created_by: string
@@ -415,6 +556,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          cash_session_id?: string | null
           check_id: string
           created_at?: string
           created_by: string
@@ -426,6 +568,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          cash_session_id?: string | null
           check_id?: string
           created_at?: string
           created_by?: string
@@ -436,6 +579,20 @@ export type Database = {
           tendered?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_cash_session_id_fkey"
+            columns: ["cash_session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_cash_session_id_fkey"
+            columns: ["cash_session_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_check_belongs_to_order"
             columns: ["order_id", "check_id"]
@@ -559,6 +716,55 @@ export type Database = {
       }
     }
     Views: {
+      v_cash_sessions: {
+        Row: {
+          amend_reason: string | null
+          amended_at: string | null
+          amended_by: string | null
+          amended_by_name: string | null
+          amended_from: number | null
+          business_date: string | null
+          cash_difference: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closed_by_name: string | null
+          counted_cash: number | null
+          counted_transfers: number | null
+          expected_cash: number | null
+          expected_transfers: number | null
+          id: string | null
+          notes: string | null
+          opened_at: string | null
+          opened_by: string | null
+          opened_by_name: string | null
+          opening_float: number | null
+          seq: number | null
+          transfer_difference: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_sessions_amended_by_fkey"
+            columns: ["amended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_sales_by_dining_room: {
         Row: {
           business_date: string | null
@@ -665,6 +871,18 @@ export type Database = {
       }
     }
     Functions: {
+      add_cash_movement: {
+        Args: {
+          p_amount: number
+          p_kind: Database["public"]["Enums"]["cash_movement_kind"]
+          p_reason: string
+        }
+        Returns: Json
+      }
+      amend_cash_session: {
+        Args: { p_counted_cash: number; p_reason: string; p_session_id: string }
+        Returns: Json
+      }
       app_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -672,10 +890,21 @@ export type Database = {
       can_edit_order: { Args: { p_order_id: string }; Returns: boolean }
       can_view_order: { Args: { p_order_id: string }; Returns: boolean }
       claim_table: { Args: { p_table_id: string }; Returns: Json }
+      close_cash_session: {
+        Args: {
+          p_allow_open_orders?: boolean
+          p_counted_cash: number
+          p_counted_transfers?: number
+          p_notes?: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       close_check: {
         Args: { p_check_id: string; p_payments: Json }
         Returns: Json
       }
+      get_cash_session: { Args: { p_session_id?: string }; Returns: Json }
       get_menu_snapshot: { Args: never; Returns: Json }
       get_order_ticket: {
         Args: { p_only_unprinted?: boolean; p_order_id: string }
@@ -686,6 +915,7 @@ export type Database = {
       is_caja_or_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       mark_order_printed: { Args: { p_order_id: string }; Returns: Json }
+      open_cash_session: { Args: { p_opening_float?: number }; Returns: Json }
       owns_table: { Args: { p_table_id: string }; Returns: boolean }
       sales_summary: { Args: { p_from: string; p_to: string }; Returns: Json }
       split_order: {
@@ -704,6 +934,7 @@ export type Database = {
       }
     }
     Enums: {
+      cash_movement_kind: "retiro" | "ingreso"
       order_status: "pendiente" | "impreso" | "en_mesa" | "cerrado" | "anulado"
       payment_method: "efectivo" | "transferencia"
       user_role: "mesero" | "caja" | "admin"
@@ -834,6 +1065,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      cash_movement_kind: ["retiro", "ingreso"],
       order_status: ["pendiente", "impreso", "en_mesa", "cerrado", "anulado"],
       payment_method: ["efectivo", "transferencia"],
       user_role: ["mesero", "caja", "admin"],

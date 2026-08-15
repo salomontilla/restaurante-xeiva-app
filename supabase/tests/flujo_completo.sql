@@ -23,6 +23,29 @@
 \set item2  'eeeeeeee-0000-4000-8000-000000000002'
 \set item3  'eeeeeeee-0000-4000-8000-000000000003'
 
+-- Limpieza previa, para que la prueba se pueda correr varias veces seguidas sin
+-- necesidad de `supabase db reset`. Usa ids fijos a propósito (son los mismos que
+-- generaría el celular del mesero), así que hay que borrar los de la corrida anterior.
+--
+-- `session_replication_role = replica` desactiva los triggers de usuario: sin eso,
+-- `tg_lock_settled_items` impediría borrar las líneas de un pedido ya cerrado — que es
+-- justo la protección que la prueba verifica más abajo.
+--
+-- Ojo: ese modo también desactiva las FK, así que el ON DELETE CASCADE NO corre y hay
+-- que borrar los hijos a mano, de adentro hacia afuera. Borrar solo `orders` dejaría
+-- líneas y subcuentas huérfanas, y la siguiente corrida daría totales absurdos.
+set session_replication_role = replica;
+delete from public.payments     where order_id in ('dddddddd-0000-4000-8000-000000000001',
+                                                   'dddddddd-0000-4000-8000-000000000002');
+delete from public.order_items  where order_id in ('dddddddd-0000-4000-8000-000000000001',
+                                                   'dddddddd-0000-4000-8000-000000000002');
+delete from public.order_checks where order_id in ('dddddddd-0000-4000-8000-000000000001',
+                                                   'dddddddd-0000-4000-8000-000000000002');
+delete from public.orders       where id       in ('dddddddd-0000-4000-8000-000000000001',
+                                                   'dddddddd-0000-4000-8000-000000000002');
+update public.tables set assigned_waiter_id = null where label in ('1', '2');
+set session_replication_role = default;
+
 select set_config('request.jwt.claim.sub', :'mesero', false);
 set role authenticated;
 

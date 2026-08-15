@@ -18,7 +18,7 @@ señal. No es una mejora opcional, es el requisito que condiciona todo el diseñ
 |---|---|
 | Frontend | Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 |
 | Backend | Supabase self-hosted — Postgres + RLS, Auth, Realtime |
-| Offline | Dexie (IndexedDB) + outbox propio · PWA con Serwist |
+| Offline | Dexie (IndexedDB) + outbox propio · PWA con service worker propio |
 | Impresión | `window.print()` con plantilla CSS — impresora normal de hojas, no térmica |
 
 ## Puesta en marcha
@@ -68,19 +68,63 @@ Usuarios del seed (contraseña `xeiva123` — **no usar en producción**):
 ### Pruebas
 
 ```bash
-pnpm test:db      # 22 casos sobre el esquema (no necesita la app corriendo)
-pnpm test:auth    # login y guards por rol (necesita `pnpm dev` corriendo)
+pnpm test:offline # capa offline del mesero      (no necesita nada corriendo)
+pnpm test:db      # 22 casos sobre el esquema    (no necesita la app corriendo)
+pnpm test:auth    # login y guards por rol       (necesita `pnpm dev` corriendo)
+pnpm test:admin   # pantallas y CRUD del admin   (necesita `pnpm dev` corriendo)
+pnpm test:caja    # comandas, impresión, Realtime (necesita `pnpm dev` corriendo)
+pnpm test:pagos   # división de cuentas y cobro  (necesita `pnpm dev` corriendo)
+pnpm test:arqueo  # arqueo de caja               (necesita `pnpm dev` corriendo)
+pnpm test:ventas  # reportes por jornada         (necesita `pnpm dev` corriendo)
 pnpm typecheck && pnpm lint
 ```
+
+`test:arqueo` demuestra lo único que hace útil a un arqueo: que sea una **foto**. Anula una línea ya
+cobrada *después* de cerrar la caja y comprueba que el esperado y el descuadre no se muevan. Cubre
+además retiros del cajón, cierre con descuadre (permitido, con observación obligatoria), cobros
+posteriores al cierre y la corrección por parte del admin.
+
+> `test:ventas` **borra todos los pedidos** y siembra jornadas históricas, para que los
+> totales del tablero sean predecibles. Córrelo al final, o resetea después.
+
+`test:ventas` comprueba que los números cuadren, que es lo único que importa en un reporte:
+totales por jornada, efectivo + transferencia = total, y que un pedido **abierto** no se cuente
+como venta.
+
+> Tras un `supabase db reset`, el contenedor de Realtime tarda un momento en volver.
+> `test:caja` espera el estado `SUBSCRIBED` antes de provocar el cambio (hasta 15 s), así
+> que no hace falta pausar a mano — pero si falla justo después de un reset, reintenta.
+
+`test:pagos` cubre la fase que mueve dinero, sobre todo por lo que NO debe poder pasar: cobrar
+un monto que no cuadra, mover platos de una cuenta ya pagada, cobrar dos veces, o que el mesero
+vea los pagos. Verifica además que al pagar la última subcuenta la mesa quede libre sola.
+
+`test:caja` abre un WebSocket de verdad y comprueba que el evento de Realtime llegue: la
+publicación de Postgres puede estar perfecta y el evento no llegar nunca, así que es la única
+forma de saberlo. Cubre además el ciclo de comandas: imprimir, adición que solo trae lo nuevo,
+reimpresión completa, y anulación de una línea ya impresa.
+
+`test:offline` es el más importante del proyecto: ejercita borradores, outbox y motor de
+sincronización con Dexie **real** sobre un IndexedDB de mentira en Node, simulando solo la
+respuesta de Supabase. Cubre el caso que exige CLAUDE.md — se va la señal a mitad del
+pedido y no se pierde nada — más idempotencia del reenvío, adiciones que solo mandan lo
+nuevo, y la diferencia entre error de red (se reintenta solo) y error de negocio (se le
+muestra a la persona).
 
 `test:db` cubre idempotencia del envío offline, adiciones que solo imprimen lo nuevo, división
 de cuentas, pago mixto y los negativos de RLS de cada rol. Corre como `authenticated`
 suplantando el claim del JWT, **no** con service_role: probar RLS con service_role no prueba
-nada, porque la ignora.
+nada, porque la ignora. Limpia sus propios datos al arrancar, así que se puede correr varias
+veces seguidas.
 
 `test:auth` inicia sesión con la misma librería que usa la app para producir cookies reales, y
 comprueba a dónde aterriza cada rol — incluida la revocación inmediata al desactivar a alguien
 con su token todavía vigente.
+
+`test:admin` comprueba que las pantallas de administración rendericen (es donde se notan los
+`select` mal escritos y las políticas que niegan una lectura), que Caja no entre, y que las
+operaciones de las Server Actions funcionen bajo RLS: nombres repetidos rechazados, baja de un
+salón que arrastra sus mesas, y reutilización del nombre una vez dado de baja.
 
 ### Desarrollo
 
@@ -121,8 +165,9 @@ Dos convenciones que importan:
 | 0 · Infraestructura, clientes de Supabase, tipos | ✅ |
 | 1 · Esquema, RLS, RPCs, vistas, seed y pruebas | ✅ |
 | 2 · Auth, guards y route groups por rol | ✅ |
-| 3 · Admin: salones, mesas, menú, usuarios | ⬜ |
-| 4 · Capa offline + vista Mesero (PWA) | ⬜ |
-| 5 · Caja: mapa realtime, detalle, impresión | ⬜ |
-| 6 · Pagos, división de cuentas y cierre | ⬜ |
-| 7 · Ventas y reportes | ⬜ |
+| 3 · Admin: salones, mesas, menú, usuarios | ✅ |
+| 4 · Capa offline + vista Mesero (PWA) | ✅ |
+| 5 · Caja: mapa realtime, detalle, impresión | ✅ |
+| 6 · Pagos, división de cuentas y cierre | ✅ |
+| 7 · Ventas y reportes | ✅ |
+| 8 · Arqueo de caja y notas por línea | ✅ |

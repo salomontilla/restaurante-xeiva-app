@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:offline": "vitest run",
     "test:auth": "node --env-file=.env.local tests/auth-guards.mjs",
+    "test:admin": "node --env-file=.env.local tests/admin.mjs",
+    "test:caja": "node --env-file=.env.local tests/caja.mjs",
+    "test:pagos": "node --env-file=.env.local tests/pagos.mjs",
+    "test:arqueo": "node --env-file=.env.local tests/arqueo.mjs",
+    "test:ventas": "node --env-file=.env.local tests/ventas.mjs",
     "test:db": "psql \"$SUPABASE_DB_URL\" -f supabase/tests/flujo_completo.sql",
     "db:push": "supabase db push --db-url \"$SUPABASE_DB_URL\"",
     "db:seed": "psql \"$SUPABASE_DB_URL\" -f supabase/seed.sql",
@@ -38,16 +44,16 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@serwist/next": "^9.5.12",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
-    "serwist": "^9.5.12",
+    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   },
   "packageManager": "pnpm@11.2.2"
 }

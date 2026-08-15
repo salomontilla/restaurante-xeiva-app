@@ -1,13 +1,17 @@
+import { TableMap } from "@/modules/salones-mesas/components/table-map";
+
 export const metadata = { title: "Mesas · Caja" };
 
+/**
+ * Pantalla principal de Caja.
+ *
+ * El mapa vive en cliente porque Realtime exige un WebSocket desde el navegador: no hay
+ * forma de mantenerlo abierto desde un Server Component.
+ */
 export default function CajaPage() {
   return (
     <div className="mx-auto w-full max-w-6xl p-4">
-      <h1 className="text-xl font-semibold">Mapa de mesas</h1>
-      <p className="text-muted-foreground mt-2 text-sm">
-        Aquí va el mapa en vivo desde la vista <code>v_table_map</code>, suscrito por
-        Realtime a <code>orders</code> y <code>tables</code>. Se implementa en la Fase 5.
-      </p>
+      <TableMap />
     </div>
   );
 }

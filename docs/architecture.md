@@ -250,9 +250,34 @@ viento. La fuente de verdad es el **resultado de la llamada real**; `onLine` es 
 resolver entre sí quién tomó la mesa 5. Sin señal, la UI bloquea tomar mesas *nuevas* pero deja seguir
 agregando platos a las que ya son suyas.
 
-PWA con `@serwist/next`: precache del shell de `/mesero`, `NetworkFirst` para datos, **nunca** cachear
-`/auth/v1`. Requiere HTTPS con **hostname real** en la LAN (no IP): los service workers no corren en
-contexto inseguro.
+**El service worker está escrito a mano** (`lib/service-worker.ts`), no con Serwist. Serwist 9 inyecta
+configuración de webpack y Next 16 compila con Turbopack, así que el build falla; Next documenta
+registrar un worker propio con `new URL(..., import.meta.url)`, que Turbopack sí bundlea. De paso da
+control exacto sobre lo único que de verdad importa: **nada de `/auth/v1`, `/rest/v1` ni `/realtime/v1`
+pasa por caché**. Servir una respuesta vieja de auth haría parecer al mesero con sesión cuando ya no la
+tiene; la app tolera no tener respuesta —para eso está IndexedDB— pero no una respuesta equivocada.
+
+Navegaciones: red primero con caché de respaldo. Assets del build (`/_next/static/`, con hash en el
+nombre): caché primero. Todo lo demás pasa de largo.
+
+Requiere HTTPS con **hostname real** en la LAN (no IP): los service workers no corren en contexto
+inseguro. Y `next dev` no lo registra en la práctica — para probar el modo offline hay que usar
+`pnpm build && pnpm start`.
+
+> Next 16 trae un `experimental.useOffline` con detección de conectividad y reintento automático de
+> navegaciones y Server Actions. **No reemplaza nada de lo de arriba**: por diseño no cubre las llamadas
+> que un Client Component hace con `fetch` —que es justo el camino de supabase-js— ni la carga completa
+> sin conexión, que sigue necesitando service worker. Queda como opción a futuro para Admin y Caja.
+
+### Navegación de la vista de mesero
+
+`/mesero` es **una sola ruta** con estado de vista en el cliente, y el botón "atrás" del celular
+funciona porque se empuja el historial con `history.pushState` a mano.
+
+*Por qué no el router de Next*: navegar con él pide al servidor la carga RSC de la ruta nueva, y el
+mesero pierde señal a mitad de un pedido. Con este esquema, una vez cargada la app, moverse entre
+mesas, carta y pedido no toca la red para nada. El guard de rol sigue en el servidor, pero corre una
+sola vez: al entrar.
 
 ### UI: shadcn/ui sobre Tailwind v4
 
@@ -275,6 +300,67 @@ inaceptable en una PWA en gama media con WiFi malo.
 **Consecuencia que hay que aceptar explícitamente**: como dos de las tres vistas hablan directo con
 Postgres, no puede existir ninguna regla de negocio que solo se valide en el servidor de Next. Todo lo
 que importa está en políticas, constraints, triggers y RPCs. Eso es lo que hace seguro el modo offline.
+
+### Arqueo de caja
+
+**Tabla propia (`cash_sessions`), con el esperado CONGELADO.** `payments` responde "¿cuánto se
+cobró?"; un arqueo responde "¿cuánto dijo el cajero que había en el cajón a las 5:07 PM del domingo,
+y contra qué cifra lo comparó *en ese momento*?". La segunda no es derivable: su insumo principal
+—el dinero físico contado— solo entra al sistema si alguien lo teclea.
+
+Y aunque el esperado sí sea derivable hoy, **no debe derivarse al leer**: si mañana se anula una
+línea impresa, `sum(payments)` cambia y con él cambiaría retroactivamente el descuadre de un arqueo
+firmado hace tres semanas. Un cuadre perfecto se convertiría solo en un faltante de $12.000 sin que
+nadie sepa por qué. El valor de un arqueo como control es que es **una foto**. Es el mismo principio
+que congela `unit_price` e `item_name` en `order_items`: **se deriva lo actual, se congela lo
+histórico**. Mientras la caja está abierta el esperado sí se calcula en vivo — ahí es lo actual.
+
+**`payments.cash_session_id` se estampa**, en vez de deducir la pertenencia por ventana de tiempo.
+Un pago cobrado sin arqueo abierto queda en `null`: un huérfano explícito y consultable, no un dato
+ambiguo que haya que interpretar comparando timestamps un año después.
+
+**Nadie tiene INSERT ni UPDATE sobre `cash_sessions`, ni siquiera el admin** — una desviación
+deliberada de la matriz general. Si existiera un UPDATE directo, el documento dejaría de ser
+evidencia. Corregir un conteo mal tecleado se hace con `amend_cash_session`: solo admin, una vez,
+con motivo, guardando el valor anterior y **sin tocar el esperado**.
+
+Detalles que importan en el cálculo: se suma `amount`, **nunca `tendered`** — tendered es lo que el
+cliente entregó antes del vuelto, y al cajón solo entra `amount`. Y "una sola caja abierta" es un
+índice único parcial, no un booleano, igual que "una mesa, un pedido abierto".
+
+**Cobrar nunca se bloquea por el arqueo.** Cerrar con mesas sin cobrar sí avisa (`OPEN_ORDERS`) y se
+puede insistir; es prevención, no barrera.
+
+### Notas por línea
+
+Cero cambios de esquema salvo un `CHECK`: la columna, el payload de `submit_order` y la política de
+UPDATE ya existían. El `CHECK` evita dos cosas concretas — que un `<textarea>` vacío guarde `''` en
+vez de `NULL` (y la comanda imprima un renglón destacado en blanco), y que un pulgar apoyado en la
+pantalla empuje media comanda fuera de la hoja.
+
+Aquí **sí** se permite texto libre. La prohibición de CLAUDE.md aplica a las *variantes*, y su razón
+es financiera: una variante cambia lo que se cobra. Una nota no toca el dinero, es una instrucción
+para una persona que la va a leer en papel. Los atajos de la interfaz solo rellenan el campo; no son
+un catálogo, porque uno cerrado garantizaría que algún día el mesero no pueda escribir lo que
+necesita y termine gritándole a la cocina.
+
+### Reportes (Fase 7)
+
+**Barras, nunca líneas.** El restaurante abre solo domingos y festivos, así que las jornadas son
+categorías discretas, no una serie continua. Una línea uniría dos domingos con una pendiente que
+atraviesa cinco días con el local cerrado, insinuando ventas que nunca existieron.
+
+**El rango se expresa en jornadas, no en días.** "Últimos 30 días" traería cuatro domingos y
+veintiséis días vacíos; lo que el dueño quiere ver es "las últimas 4 jornadas". El rango por fechas
+sigue disponible detrás, para un periodo concreto.
+
+**Los gráficos son HTML plano**, sin librería de charts: son barras, y una dependencia de ~100 KB
+para dibujar rectángulos no se paga sola. Además así funcionan en Server Components y salen bien al
+imprimir. Los colores viven en `.viz-root` (`app/globals.css`) y están **validados contra la
+superficie real de la app** (blanco puro): separación CVD ΔE 24.7 y contraste ≥3:1. Si se cambian,
+hay que volver a validarlos — no se eligen a ojo.
+
+Los reportes leen solo pedidos `cerrado`. Un pedido abierto no es una venta.
 
 ---
 

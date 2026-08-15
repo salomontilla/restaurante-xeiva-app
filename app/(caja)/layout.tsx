@@ -12,6 +12,7 @@ export default async function CajaLayout({ children }: { children: ReactNode }) 
         profile={profile}
         nav={[
           { href: "/caja", label: "Mesas" },
+          { href: "/caja/arqueo", label: "Arqueo" },
           { href: "/mesero", label: "Tomar pedido" },
         ]}
       />

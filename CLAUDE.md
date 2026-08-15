@@ -61,6 +61,32 @@ llegan a Caja para imprimirse y enviarse a Cocina, y da a Caja y Admin control s
 - **Anulación de líneas**: el mesero puede eliminar libremente las líneas que **aún no se han impreso**.
   Una vez impresa (ya está en Cocina), solo **Caja** puede anularla: la línea deja de cobrarse pero queda
   registrada como anulada, con quién la anuló y cuándo, para saber qué comida se preparó y no se cobró.
+- **Notas por línea**: cada línea del pedido admite una observación de texto libre (máx. 120
+  caracteres) que se imprime destacada junto al plato en la comanda. La escriben el mesero o Caja
+  **solo mientras la línea no se haya impreso**; una vez en Cocina la nota queda congelada, porque
+  cambiarla no cambiaría el papel que el cocinero ya tiene en la mano. Un cambio de opinión después
+  de impresa se resuelve anulando la línea y volviéndola a pedir. La nota NO afecta el precio —para
+  eso están las variantes— y por eso aquí sí se permite texto libre. No se administra por catálogo:
+  la interfaz ofrece atajos predefinidos que solo rellenan el campo, y siguen siendo editables.
+- **Arqueo de caja**: al terminar la jornada, Caja cuadra el efectivo del cajón contra lo que el
+  sistema esperaba. Reglas:
+  - Se **abre** la caja registrando la **base** (fondo para vueltos) y se **cierra** contando el
+    efectivo físico. El conteo **incluye la base**: se cuenta lo que hay en el cajón, no solo la venta.
+  - Esperado = base + ventas en efectivo − retiros + ingresos. **Sí se saca plata del cajón durante
+    la jornada** (pagarle a un proveedor, mandar por hielo), así que esos movimientos se registran
+    con su motivo.
+  - Solo se cuadra el **efectivo**. Las transferencias se listan con su referencia para poder
+    puntearlas contra la app del banco, pero verificarlas es **opcional**: sin señal igual se cierra.
+  - **Se puede cerrar con descuadre** — negarlo solo lograría que alguien invente el número. Si hay
+    diferencia, la observación es obligatoria.
+  - Un arqueo **no se reabre ni se recalcula**: es la foto de lo que se contó ese día. Si mañana se
+    anula una línea, el descuadre de un arqueo ya cerrado no cambia. El Admin puede **corregir** un
+    conteo mal tecleado una sola vez, con motivo, y queda el valor anterior.
+  - Hay **una sola caja abierta a la vez**. Cobrar nunca se bloquea por el arqueo: si se cobra
+    después de cerrado, ese pago queda señalado aparte y el arqueo no se toca.
+  - La cuenta de Caja es **una sola compartida** en la estación, así que "quién abrió y cerró" no
+    identifica a una persona concreta. Si algún día se quiere responsabilidad individual, hay que
+    crear una cuenta por cajero (el Admin ya puede hacerlo).
 
 ## Stack técnico
 

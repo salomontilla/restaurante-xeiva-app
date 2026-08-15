@@ -128,3 +128,41 @@
     @apply font-sans;
   }
 }
+/*
+ * Impresión.
+ *
+ * La impresora de Caja es de hojas normales, no térmica. Las vistas de impresión viven
+ * en su propio route group (app/(print)) para salir sin el encabezado de la app, así
+ * que aquí solo hace falta fijar los márgenes y forzar tinta negra sobre blanco: los
+ * navegadores omiten los fondos al imprimir y un texto claro saldría ilegible.
+ */
+@media print {
+  @page {
+    size: auto;
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+}
+
+/*
+ * Paleta de visualización de datos.
+ *
+ * Valores validados contra la superficie REAL de la app (blanco puro, no un gris de
+ * referencia): separación CVD ΔE 24.7 y contraste ≥3:1 en ambos slots. Si se cambian,
+ * hay que volver a validarlos — no se eligen a ojo.
+ *
+ * No hay bloque oscuro porque la app es de tema claro fijo (celular al sol y estación
+ * de caja); ver components/ui/sonner.tsx.
+ */
+.viz-root {
+  --viz-series-1: #2a78d6; /* azul · magnitud y "efectivo" */
+  --viz-series-2: #eb6834; /* naranja · "transferencia" */
+  --viz-grid: #e1e0d9;
+  --viz-baseline: #c3c2b7;
+  --viz-muted: #898781;
+}
